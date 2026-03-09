@@ -15,6 +15,7 @@
   "build": {
     "appId": "com.iisuperboyii.spotify-yt",
     "productName": "Spotify YT Player",
+    "npmRebuild": false,
     "directories": {
       "output": "release"
     },
