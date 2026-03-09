@@ -1,0 +1,19 @@
+.main-view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #2a2a2a 0%, #121212 30%);
+  position: relative;
+}
+
+.main-title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.main-subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #b3b3b3;
+}

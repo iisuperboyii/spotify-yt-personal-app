@@ -1,0 +1,17 @@
+{
+  "name": "spotify-yt-player",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev:react": "npm run dev --prefix renderer",
+    "dev:electron": "electron .",
+    "dev": "concurrently \"npm run dev:react\" \"npm run dev:electron\""
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "concurrently": "^8.2.2",
+    "electron": "^30.0.0"
+  },
+  "dependencies": {
+    "win-audio": "^3.0.5"
+  }
+}

@@ -1,0 +1,358 @@
+.sidebar {
+  position: fixed;
+  top: 72px;
+  left: 8px;
+  width: 240px;
+  height: calc(100vh - 80px - 72px);
+  background-color: #000;
+  color: #b3b3b3;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.3, 0, 0, 1), transform 0.3s cubic-bezier(0.3, 0, 0, 1), opacity 0.3s cubic-bezier(0.3, 0, 0, 1);
+  z-index: 50;
+}
+
+/* Logo */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 16px 24px;
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* Main Navigation */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px;
+  overflow-x: hidden;
+  /* Prevent horizontal scroll */
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: #b3b3b3;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-item:hover {
+  background-color: #1a1a1a;
+  color: white;
+}
+
+.sidebar-item.active {
+  color: white;
+  background-color: #282828;
+}
+
+.sidebar-item span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Divider */
+.sidebar-divider {
+  height: 1px;
+  background: #282828;
+  margin: 16px 24px;
+}
+
+/* Library Section */
+.sidebar-library {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 16px;
+}
+
+.sidebar-library-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Playlists */
+.sidebar-playlists {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.sidebar-playlist-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+  margin-bottom: 4px;
+}
+
+.sidebar-playlist-item:hover {
+  background-color: #1a1a1a;
+}
+
+.playlist-item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.playlist-cover {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #333;
+  position: relative;
+}
+
+.playlist-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.playlist-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.playlist-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.playlist-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-creator {
+  font-size: 12px;
+  color: #b3b3b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Scrollbar */
+.sidebar-playlists::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-playlists::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-playlists::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.sidebar-playlists::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Bottom Section */
+.sidebar-bottom {
+  padding: 16px;
+  border-top: 1px solid #282828;
+}
+
+.playlist-menu-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: #b3b3b3;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.sidebar-playlist-item:hover .playlist-menu-btn {
+  opacity: 1;
+}
+
+.playlist-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.playlist-menu-dropdown {
+  position: absolute;
+  right: 8px;
+  top: 100%;
+  background: #282828;
+  border-radius: 4px;
+  padding: 4px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  min-width: 160px;
+}
+
+.playlist-menu-dropdown button {
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: white;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.playlist-menu-dropdown button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Collapsible Sidebar Styles - Spotify Design */
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  margin: 8px 8px 0 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #b3b3b3;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  position: relative;
+  width: calc(100% - 16px);
+  justify-content: flex-start;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.sidebar-toggle svg {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.sidebar-toggle .toggle-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* When collapsed, center the icon */
+.sidebar.collapsed .sidebar-toggle {
+  justify-content: center;
+  padding: 8px;
+  margin: 8px auto;
+  width: 48px;
+  height: 48px;
+}
+
+.sidebar.collapsed .sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+/* Remove old toggle icon styles */
+.toggle-icon {
+  display: none;
+}
+
+.toggle-icon span {
+  display: none;
+}
+
+/* Collapsed sidebar */
+.sidebar.collapsed {
+  width: 72px;
+  transition: width 0.3s cubic-bezier(0.3, 0, 0, 1);
+}
+
+.sidebar.collapsed .sidebar-playlists {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  align-items: center;
+}
+
+.sidebar.collapsed .sidebar-playlist-item {
+  width: 56px;
+  height: 56px;
+}
+
+.sidebar.collapsed .playlist-item-content {
+  padding: 0;
+  justify-content: center;
+}
+
+.sidebar.collapsed .playlist-cover {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .playlist-cover img,
+.sidebar.collapsed .playlist-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+/* Hide library header (Liked Songs) when collapsed */
+.sidebar.collapsed .sidebar-library-header {
+  display: none;
+}
+
+/* Hide playlist info text when collapsed */
+.sidebar.collapsed .playlist-info {
+  display: none;
+}
+
+/* Hide options menu when collapsed */
+.sidebar.collapsed .playlist-options {
+  display: none;
+}

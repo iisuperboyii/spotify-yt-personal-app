@@ -1,0 +1,414 @@
+.player-bar {
+  height: 90px;
+  background: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  color: white;
+  box-sizing: border-box;
+
+  /* Layout Fix: Fixed to bottom, full width, over sidebar */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 9000;
+  border-top: 1px solid #282828;
+}
+
+/* =========================
+   LEFT: Song Info + Like
+   ========================= */
+.player-left {
+  display: flex;
+  align-items: center;
+  width: 30%;
+  min-width: 180px;
+}
+
+.album-art {
+  width: 56px;
+  height: 56px;
+  background: #282828;
+  margin-right: 14px;
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.album-art:hover {
+  transform: scale(1.02);
+}
+
+/* Open/Expand arrow overlay on art (optional, but requested full screen button elsewhere) */
+
+.song-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-right: 14px;
+  overflow: hidden;
+}
+
+.song-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.song-title:hover {
+  text-decoration: underline;
+}
+
+.song-artist {
+  font-size: 11px;
+  color: #b3b3b3;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.song-artist:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+.like-btn {
+  background: transparent;
+  border: none;
+  color: #b3b3b3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.like-btn:hover {
+  color: white;
+  transform: scale(1.1);
+}
+
+.like-btn.active {
+  color: #1ed760;
+  /* Spotify Green */
+}
+
+/* =========================
+   CENTER: Controls + Progress
+   ========================= */
+.player-center {
+  width: 40%;
+  max-width: 722px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+/* Standard Control Icons */
+.control-btn {
+  background: transparent;
+  border: none;
+  color: #b3b3b3;
+  /* Spotify gray */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 4px;
+  position: relative;
+}
+
+.control-btn:hover {
+  color: white;
+}
+
+.control-btn.active {
+  color: #1ed760;
+  /* Active state for shuffle/repeat */
+  position: relative;
+}
+
+.control-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background-color: #1ed760;
+  border-radius: 50%;
+}
+
+.control-btn.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.control-btn.disabled:hover {
+  color: #b3b3b3;
+}
+
+/* Play/Pause Button - White Circle */
+.play-btn-wrapper {
+  background: white;
+  color: black;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  /* Force size */
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s;
+  flex-shrink: 0;
+  /* Prevent squeezing */
+  padding: 0;
+  border: none;
+}
+
+.play-btn-wrapper:hover {
+  transform: scale(1.05);
+}
+
+.play-btn-wrapper:active {
+  transform: scale(0.95);
+}
+
+.play-btn-icon {
+  font-size: 16px;
+  /* slightly smaller icon relative to button */
+  color: black !important;
+  fill: black;
+  display: block;
+}
+
+.play-btn-icon.pause {
+  /* margin-left: 0; No longer needed with good centering */
+}
+
+.game-btn {
+  /* Generic style for prev/next */
+  color: #b3b3b3;
+  font-size: 20px;
+}
+
+.game-btn:hover {
+  color: white;
+}
+
+
+/* Progress Bar Container */
+.playback-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #a7a7a7;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-container {
+  height: 4px;
+  /* Default height */
+  width: 100%;
+  background-color: #4d4d4d;
+  /* Dark gray for empty part */
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  /* Or allow thumb overflow? Spotify usually allows it but web implementation varies */
+}
+
+.progress-fill {
+  background-color: white;
+  /* Default white */
+  height: 100%;
+  border-radius: 2px;
+  width: 0%;
+  /* Dynamic */
+  position: relative;
+}
+
+/* Hover effects for progress bar */
+.progress-container:hover .progress-fill {
+  background-color: #1db954;
+  /* Green on hover */
+}
+
+/* =========================
+   RIGHT: Extra Controls
+   ========================= */
+.player-right {
+  width: 30%;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.extra-btn {
+  background: transparent;
+  border: none;
+  color: #b3b3b3;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.extra-btn:hover {
+  color: white;
+  transform: scale(1.05);
+}
+
+.extra-btn.active {
+  color: #1ed760;
+}
+
+/* Volume Slider */
+.volume-container {
+  display: flex;
+  align-items: center;
+  width: 93px;
+  margin-left: 4px;
+}
+
+.volume-container input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+
+  /* CSS Variable driven gradient */
+  background-image: linear-gradient(white, white);
+  background-size: var(--volume-percent, 50%) 100%;
+  background-repeat: no-repeat;
+  background-color: #4d4d4d;
+}
+
+/* Hover state for volume slider logic needs to be handled via parent class or specific hover */
+.volume-container:hover input[type="range"] {
+  background-image: linear-gradient(#1db954, #1db954);
+}
+
+
+.volume-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  opacity: 0;
+  /* Hidden by default */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.1s;
+}
+
+.volume-container:hover input[type="range"]::-webkit-slider-thumb {
+  opacity: 1;
+  /* Show on hover */
+}
+
+
+/* =========================
+   LYRICS PANEL (inherited basics, styled to match black)
+   ========================= */
+.lyrics-panel {
+  position: fixed;
+  bottom: 90px;
+  right: 0;
+  width: 350px;
+  /* adjusted */
+  height: calc(100vh - 90px);
+  /* Full height side panel */
+  background: #121212;
+  border-left: 1px solid #282828;
+  z-index: 100;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.lyrics-panel.show {
+  transform: translateX(0);
+}
+
+/* Small Lyrics Overlay */
+.lyrics-panel-small {
+  position: absolute;
+  bottom: 90px;
+  right: 20px;
+  width: 300px;
+  max-height: 400px;
+  background-color: #1f1f1f;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  border: 1px solid #333;
+}
+
+.lyrics-header {
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 12px;
+}
+
+.lyrics-content p {
+  font-size: 14px;
+  color: #b3b3b3;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+/* Repeat One Badge */
+.repeat-one-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 9px;
+  font-weight: 900;
+  color: #1db954;
+  background-color: #000;
+  padding: 0 2px;
+  border-radius: 4px;
+}

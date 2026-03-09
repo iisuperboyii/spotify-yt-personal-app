@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+renderer/node_modules/
+
+# Build outputs
+dist/
+renderer/dist/
+
+# Electron build output
+out/
+release/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local env files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Lock files (optional - keep if you want reproducible installs)
+# package-lock.json
+# renderer/package-lock.json

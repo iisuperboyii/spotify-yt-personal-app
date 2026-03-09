@@ -1,0 +1,291 @@
+.now-playing {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  padding-bottom: 90px;
+  /* Space for PlayerBar */
+  background: linear-gradient(180deg, #1a1a1a 0%, #121212 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 5000;
+  /* Sidebar is low, PlayerBar is 9000 */
+  transition: background 0.8s ease;
+  /* Smooth color transitions */
+}
+
+/* Header */
+.now-playing-header {
+  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.now-playing-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.back-button {
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.back-button:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* Main Content - Dynamic Layout */
+/* Main Content - Dynamic Layout */
+.now-playing-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 48px;
+  gap: 48px;
+  overflow: hidden;
+  transition: all 0.4s ease;
+  /* Smooth transition */
+}
+
+/* Centered layout (no lyrics) - Default State */
+.now-playing-main.centered {
+  justify-content: center;
+}
+
+.now-playing-main.centered .now-playing-album-section {
+  max-width: 500px;
+  transform: scale(1.1);
+  /* Make art slightly larger when centered */
+}
+
+.now-playing-main.centered .now-playing-lyrics-section {
+  display: none;
+  /* Completely hide lyrics */
+}
+
+/* Side-by-side layout (with lyrics) */
+.now-playing-main.with-lyrics {
+  justify-content: center;
+  /* keep centered but split space */
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.now-playing-main.with-lyrics .now-playing-album-section {
+  flex: 1;
+  max-width: 500px;
+  transform: scale(1) translateX(0);
+  margin-right: 40px;
+  opacity: 1;
+}
+
+.now-playing-main.with-lyrics .now-playing-lyrics-section {
+  flex: 1;
+  max-width: 600px;
+  height: 80%;
+  opacity: 1;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Album Section */
+.now-playing-album-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Album Art */
+.album-art-large {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  margin-bottom: 32px;
+  background: #282828;
+}
+
+.album-art-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.art-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+/* Song Info */
+.song-info-large {
+  text-align: center;
+  width: 100%;
+}
+
+.song-title-large {
+  font-size: 36px;
+  font-weight: 900;
+  color: white;
+  margin: 0 0 12px 0;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+
+.song-artist-large {
+  font-size: 20px;
+  font-weight: 600;
+  color: #b3b3b3;
+  margin: 0 0 8px 0;
+}
+
+.song-album-large {
+  font-size: 16px;
+  color: #888;
+  margin: 0;
+}
+
+/* Lyrics Section */
+.now-playing-lyrics-section {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.lyrics-section-full {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.lyrics-header-full {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.lyrics-header-full h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.lyrics-text-full {
+  flex: 1;
+  color: #b3b3b3;
+  font-size: 16px;
+  line-height: 2;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+/* Scrollbar for lyrics */
+.lyrics-text-full::-webkit-scrollbar {
+  width: 8px;
+}
+
+.lyrics-text-full::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lyrics-text-full::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.lyrics-text-full::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .now-playing-main.with-lyrics {
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+
+  .now-playing-main.with-lyrics .now-playing-album-section,
+  .now-playing-main.with-lyrics .now-playing-lyrics-section {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .now-playing-lyrics-section {
+    max-height: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .album-art-large {
+    max-width: 300px;
+  }
+
+  .song-title-large {
+    font-size: 28px;
+  }
+
+  .song-artist-large {
+    font-size: 16px;
+  }
+}

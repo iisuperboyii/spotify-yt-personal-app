@@ -1,0 +1,21 @@
+/* Global focus outline removal - use subtle effects instead */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: none;
+}
+
+button:focus {
+  outline: none;
+}
+
+input:focus {
+  outline: none;
+}
+
+/* Remove default button focus styles */
+button::-moz-focus-inner {
+  border: 0;
+}

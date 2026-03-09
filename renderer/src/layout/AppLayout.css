@@ -1,0 +1,27 @@
+.main-content-wrapper {
+  transition: margin-left 0.3s cubic-bezier(0.3, 0, 0, 1);
+}
+
+/* When sidebar is collapsed, reduce left margin */
+body.sidebar-collapsed .main-content-wrapper {
+  margin-left: 88px !important;
+}
+
+/* When hovering playlist songs, shift content left to show YouTube Music */
+body.playlist-song-hovered .main-content-wrapper {
+  margin-left: 0 !important;
+  /* Shift all the way left */
+}
+
+/* Hide sidebar when hovering playlist songs */
+body.playlist-song-hovered .sidebar {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Also need to shift TopNav */
+body.playlist-song-hovered .top-nav {
+  padding-left: 24px !important;
+  /* Just basic padding */
+}
