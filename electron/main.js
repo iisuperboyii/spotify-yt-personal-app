@@ -1,6 +1,13 @@
 const { app, BrowserWindow, ipcMain, globalShortcut } = require("electron");
 const path = require("path");
-const audio = require("win-audio").speaker;
+
+// win-audio is a native module - gracefully handle if it can't load in packaged app
+let audio = null;
+try {
+  audio = require("win-audio").speaker;
+} catch (e) {
+  console.warn("[win-audio] Could not load native binding, system volume control disabled:", e.message);
+}
 
 let mainWindow;
 
@@ -54,6 +61,7 @@ app.whenReady().then(() => {
 // SYSTEM VOLUME
 // =========================
 ipcMain.handle("set-system-volume", (_event, volume) => {
+  if (!audio) return; // win-audio not available in this environment
   try {
     const clamped = Math.max(0, Math.min(volume, 100));
     audio.set(clamped);
