@@ -16,7 +16,13 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadURL("http://localhost:5173");
+  // In production load the built renderer; in dev use Vite dev server
+  const isDev = !app.isPackaged;
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:5173");
+  } else {
+    mainWindow.loadFile(path.join(__dirname, "../renderer/dist/index.html"));
+  }
 }
 
 app.whenReady().then(() => {

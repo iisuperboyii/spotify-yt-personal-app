@@ -5,6 +5,7 @@ renderer/node_modules/
 # Build outputs
 dist/
 renderer/dist/
+release/
 
 # Electron build output
 out/
