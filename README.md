@@ -21,7 +21,7 @@ Spotifyt is a desktop music player that brings a clean, Spotify-style interface 
 
 If you have YouTube Premium? No ads. Just music.
 
-> ⚠️ **Early Alpha** — This is v1.0.0-beta. It works, but barely. You've been warned (lovingly).
+> ⚠️ **Early Beta** — This is v1.0.0-beta. It works, but barely. You've been warned (lovingly).
 
 ---
 
