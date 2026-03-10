@@ -106,13 +106,19 @@ export default function Sidebar() {
 
   return (
     <div className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* Toggle Button - Spotify Style */}
-      <button className="sidebar-toggle" onClick={toggleSidebar} title={isCollapsed ? "Expand your library" : "Collapse your library"}>
-        <svg role="img" height="24" width="24" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6.464a1 1 0 0 0-.5-.866l-6-3.464zM9 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z"></path>
-        </svg>
-        {!isCollapsed && <span className="toggle-text">Your Library</span>}
-      </button>
+      {/* Toggle Button + Library Link */}
+      <div className="sidebar-header-row">
+        <button className="sidebar-toggle" onClick={toggleSidebar} title={isCollapsed ? "Expand your library" : "Collapse your library"}>
+          <svg role="img" height="24" width="24" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6.464a1 1 0 0 0-.5-.866l-6-3.464zM9 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z"></path>
+          </svg>
+        </button>
+        {!isCollapsed && (
+          <span className="toggle-text" onClick={() => navigate('/library')} style={{ cursor: 'pointer' }}>
+            Your Library
+          </span>
+        )}
+      </div>
 
       {/* Library Section */}
       <div className="sidebar-library">

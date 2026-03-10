@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiPlay, FiClock } from "react-icons/fi";
-import { getPlaylistSongs, playSongInPlayback } from "../utils/ytMusicAPI";
+import { FiArrowLeft, FiPlay, FiClock, FiPlusCircle } from "react-icons/fi";
+import { getPlaylistSongs, playSongInPlayback, addToQueue } from "../utils/ytMusicAPI";
 import "./PlaylistView.css";
 
 // Text scramble utility
@@ -44,7 +44,18 @@ export default function PlaylistView() {
   const [loading, setLoading] = useState(true);
   const [hoveredSong, setHoveredSong] = useState(null);
   const [backgroundImage, setBackgroundImage] = useState('');
+  const [queuedSongs, setQueuedSongs] = useState(new Set());
   const scrambleIntervals = useRef({});
+
+  const handleAddToQueue = async (e, song) => {
+    e.stopPropagation();
+    if (!song.videoId) return;
+    const res = await addToQueue(song.videoId);
+    if (res?.success !== false) {
+      setQueuedSongs(prev => new Set([...prev, song.videoId]));
+      setTimeout(() => setQueuedSongs(prev => { const n = new Set(prev); n.delete(song.videoId); return n; }), 2000);
+    }
+  };
 
   // Add/remove body class when hovering to hide sidebar
   useEffect(() => {
@@ -168,7 +179,7 @@ export default function PlaylistView() {
   if (loading) {
     return (
       <div className="playlist-view loading">
-        <div className="loading-spinner">🎵</div>
+        <div className="loading-spinner-green" />
         <p>Loading playlist...</p>
       </div>
     );
@@ -266,6 +277,15 @@ export default function PlaylistView() {
 
               <div className="col-artist">{song.artist}</div>
               <div className="col-duration">{song.duration}</div>
+              {song.videoId && (
+                <button
+                  className={`add-queue-btn ${queuedSongs.has(song.videoId) ? 'queued' : ''}`}
+                  title="Add to queue"
+                  onClick={(e) => handleAddToQueue(e, song)}
+                >
+                  {queuedSongs.has(song.videoId) ? '✓' : '+'}
+                </button>
+              )}
             </div>
           ))}
         </div>

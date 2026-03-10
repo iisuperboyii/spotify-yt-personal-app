@@ -5,15 +5,21 @@
   width: 100vw;
   height: 100vh;
   padding-bottom: 90px;
-  /* Space for PlayerBar */
   background: linear-gradient(180deg, #1a1a1a 0%, #121212 100%);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 5000;
-  /* Sidebar is low, PlayerBar is 9000 */
   transition: background 0.8s ease;
-  /* Smooth color transitions */
+}
+
+/* Full-height flex row: main content + optional side panel */
+.now-playing-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Header */
@@ -84,10 +90,32 @@
   /* Completely hide lyrics */
 }
 
-/* Side-by-side layout (with lyrics) */
+/* Side-by-side layout (with lyrics or queue) */
+.now-playing-main.with-panel {
+  justify-content: center;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.now-playing-main.with-panel .now-playing-album-section {
+  flex: 1;
+  max-width: 380px;
+  transform: scale(1) translateX(0);
+  margin-right: 40px;
+  opacity: 1;
+}
+
+.now-playing-main.with-panel .now-playing-lyrics-section {
+  flex: 1;
+  max-width: 500px;
+  height: 80%;
+  opacity: 1;
+}
+
+/* Keep old with-lyrics as alias */
 .now-playing-main.with-lyrics {
   justify-content: center;
-  /* keep centered but split space */
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -106,6 +134,22 @@
   max-width: 600px;
   height: 80%;
   opacity: 1;
+}
+
+/* Queue panel inside now-playing */
+.now-playing-queue-panel {
+  width: 320px;
+  flex-shrink: 0;
+  height: 100%;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(20px);
+  animation: slideInRight 0.25s ease;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
 @keyframes fadeInSlide {

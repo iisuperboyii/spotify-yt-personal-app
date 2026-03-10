@@ -816,6 +816,362 @@ export const getPlaybackProgress = async () => {
 };
 
 /**
+ * Get the current playback queue from the PLAYBACK webview.
+ * Returns { nowPlaying, upcoming[] } — upcoming contains ONLY songs between
+ * the currently playing item and the "Autoplay" separator.
+ * Each item includes domIndex = its actual index in ytmusic-player-queue-item NodeList.
+ */
+export const getQueue = async () => {
+  return await executeInPlayback(`
+    (function() {
+      try {
+        const result = { nowPlaying: null, upcoming: [] };
+
+        // --- Now Playing via mediaSession ---
+        const md = navigator.mediaSession?.metadata;
+        if (md) {
+          result.nowPlaying = {
+            title: md.title || '',
+            artist: md.artist || '',
+            artwork: md.artwork?.[0]?.src || ''
+          };
+        }
+
+        // --- Grab every queue-level node (items + separators) to find boundaries ---
+        const queueContainer = document.querySelector('#contents.ytmusic-player-queue') ||
+                               document.querySelector('ytmusic-player-queue #contents') ||
+                               document.querySelector('#queue-content');
+
+        const allQueueItems = Array.from(
+          document.querySelectorAll('ytmusic-player-queue-item')
+        );
+
+        if (allQueueItems.length === 0) return result;
+        // --- Find the currently playing item ---
+        let currentIndex = -1;
+        for (let i = 0; i < allQueueItems.length; i++) {
+          const item = allQueueItems[i];
+          if (
+            item.hasAttribute('selected') ||
+            item.hasAttribute('playing') ||
+            item.classList.contains('selected') ||
+            item.classList.contains('playing') ||
+            item.getAttribute('aria-selected') === 'true' ||
+            item.getAttribute('selected') !== null ||
+            item.querySelector('.playing-indicator') !== null ||
+            item.querySelector('.bar-container') !== null
+          ) {
+            currentIndex = i;
+            break;
+          }
+        }
+
+        // Fallback: match by mediaSession title
+        if (currentIndex === -1 && result.nowPlaying?.title) {
+          const nowTitle = result.nowPlaying.title.toLowerCase();
+          for (let i = 0; i < allQueueItems.length; i++) {
+            const titleEl = allQueueItems[i].querySelector(
+              '.song-title, yt-formatted-string.title, [class*="title"], .text'
+            );
+            if (titleEl && titleEl.textContent?.trim().toLowerCase() === nowTitle) {
+              currentIndex = i;
+              break;
+            }
+          }
+        }
+
+        // Debug: log detection state
+        console.log('[getQueue] totalItems:', allQueueItems.length, 'currentIndex:', currentIndex);
+
+
+        // --- Find the Autoplay separator so we stop before recommended songs ---
+        // YTM puts text like "Autoplay is on" or "START RADIO" between queue and autoplay.
+        // All spans / divs with such text sit as siblings of the queue items.
+        let autoplayIndex = allQueueItems.length; // default: include all
+        const allSiblings = queueContainer ? queueContainer.children : [];
+        let passedCurrent = false;
+        let queueItemCounter = 0;
+        for (let i = 0; i < allSiblings.length; i++) {
+          const child = allSiblings[i];
+          if (child.tagName && child.tagName.toLowerCase() === 'ytmusic-player-queue-item') {
+            queueItemCounter++;
+            if (queueItemCounter - 1 === currentIndex) passedCurrent = true;
+            continue;
+          }
+          // If we've passed the current song and hit a non-queue-item element
+          // that mentions autoplay, that's where we stop
+          if (passedCurrent) {
+            const txt = (child.textContent || '').toLowerCase();
+            if (txt.includes('autoplay') || txt.includes('start radio') || txt.includes('auto play')) {
+              autoplayIndex = queueItemCounter;
+              break;
+            }
+          }
+        }
+
+        // Only include items AFTER current AND BEFORE autoplay separator
+        const startIndex = currentIndex === -1 ? 0 : currentIndex + 1;
+        const endIndex = Math.min(autoplayIndex, allQueueItems.length);
+        const upcomingItems = allQueueItems.slice(startIndex, endIndex);
+
+        const seenTitles = new Set();
+        result.upcoming = upcomingItems.map((item, offset) => {
+          const titleEl = item.querySelector('.song-title') ||
+                          item.querySelector('yt-formatted-string.title') ||
+                          item.querySelector('[class="title"]');
+          const artistEl = item.querySelector('.byline') ||
+                           item.querySelector('yt-formatted-string.byline');
+          const imgEl = item.querySelector('img');
+
+          const title = titleEl?.textContent?.trim() || '';
+          const artist = artistEl?.textContent?.trim() || '';
+
+          return {
+            title,
+            artist,
+            artwork: imgEl?.src || '',
+            domIndex: startIndex + offset
+          };
+        }).filter(i => {
+          if (!i.title) return false;
+          const key = i.title + '|||' + i.artist;
+          if (seenTitles.has(key)) return false;
+          seenTitles.add(key);
+          return true;
+        });
+
+        return result;
+      } catch(e) {
+        return { nowPlaying: null, upcoming: [], error: e.message };
+      }
+    })();
+  `);
+};
+
+/**
+ * Play from a specific position in the queue by clicking that queue item.
+ * @param {number} domIndex - actual DOM index in ytmusic-player-queue-item list
+ */
+export const playFromQueueIndex = async (domIndex) => {
+  return await executeInPlayback(`
+    (function() {
+      return new Promise(async (resolve) => {
+        try {
+          const items = document.querySelectorAll('ytmusic-player-queue-item');
+          const item = items[${domIndex}];
+          if (!item) return resolve({ success: false, error: 'No item at domIndex ${domIndex}' });
+
+          // Scroll into view first
+          item.scrollIntoView({ block: 'center', behavior: 'instant' });
+          await new Promise(r => setTimeout(r, 200));
+
+          // Try clicking the title/song link inside the queue item first
+          const titleLink = item.querySelector('.song-title') ||
+                            item.querySelector('yt-formatted-string.title') ||
+                            item.querySelector('a');
+
+          const target = titleLink || item;
+          const rect = target.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+
+          // Double-click approach: YTM queue items respond to dblclick
+          target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
+          await new Promise(r => setTimeout(r, 50));
+          target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
+          await new Promise(r => setTimeout(r, 50));
+          target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
+          await new Promise(r => setTimeout(r, 100));
+          // Also dispatch dblclick in case YTM requires it
+          target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
+
+          resolve({ success: true });
+        } catch(e) {
+          resolve({ success: false, error: e.message });
+        }
+      });
+    })();
+  `);
+};
+
+/**
+ * Add a song to the playback queue.
+ * Strategy 1: Try to find the song on the current browse page and use context menu.
+ * Strategy 2: Navigate to the song's watch page and use the menu there.
+ * @param {string} videoId
+ */
+export const addToQueue = async (videoId) => {
+  const wv = getWebview();
+  if (!wv) return { success: false, error: 'Browse webview not available' };
+
+  // First try to find the song on the current page (avoids navigation)
+  const resultOnPage = await wv.executeJavaScript(`
+    (function() {
+      return new Promise(async (resolve) => {
+        try {
+          // Find song by videoId link on current page
+          const link = document.querySelector('a[href*="v=${videoId}"]') ||
+                       document.querySelector('a[href*="${videoId}"]');
+          if (!link) return resolve({ found: false });
+
+          const item = link.closest(
+            'ytmusic-responsive-list-item-renderer, ytmusic-two-row-item-renderer'
+          );
+          if (!item) return resolve({ found: false });
+
+          // Hover to reveal More Actions button
+          item.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+          item.dispatchEvent(new MouseEvent('mouseover',  { bubbles: true }));
+          await new Promise(r => setTimeout(r, 400));
+
+          const menuBtn =
+            item.querySelector('button[aria-label="More actions"]') ||
+            item.querySelector('yt-button-shape button') ||
+            item.querySelector('ytmusic-menu-renderer button');
+
+          if (!menuBtn) return resolve({ found: false });
+
+          menuBtn.click();
+          await new Promise(r => setTimeout(r, 700));
+
+          const menuItems = document.querySelectorAll(
+            'ytmusic-menu-service-item-renderer, tp-yt-paper-item, yt-list-item-view'
+          );
+          const queueKeywords = ['add to queue', 'save to queue', 'play next'];
+          for (const mi of menuItems) {
+            const text = mi.textContent?.trim()?.toLowerCase() || '';
+            if (queueKeywords.some(kw => text.includes(kw))) {
+              mi.click();
+              return resolve({ found: true, success: true, action: text });
+            }
+          }
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          resolve({ found: true, success: false, error: 'No queue option in menu' });
+        } catch(e) {
+          resolve({ found: false, error: e.message });
+        }
+      });
+    })();
+  `);
+
+  if (resultOnPage?.found && resultOnPage?.success) {
+    return resultOnPage;
+  }
+
+  // Strategy 2: Navigate to the song's search and try there
+  try {
+    const searchUrl = `https://music.youtube.com/search?q=${videoId}`;
+    await wv.loadURL(searchUrl);
+    await new Promise(r => setTimeout(r, 3000));
+
+    return await wv.executeJavaScript(`
+      (function() {
+        return new Promise(async (resolve) => {
+          try {
+            const items = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
+            if (items.length === 0) return resolve({ success: false, error: 'No results found' });
+
+            const item = items[0]; // first result
+            item.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+            item.dispatchEvent(new MouseEvent('mouseover',  { bubbles: true }));
+            await new Promise(r => setTimeout(r, 400));
+
+            const menuBtn =
+              item.querySelector('button[aria-label="More actions"]') ||
+              item.querySelector('yt-button-shape button') ||
+              item.querySelector('ytmusic-menu-renderer button');
+
+            if (!menuBtn) return resolve({ success: false, error: 'Menu button not found' });
+
+            menuBtn.click();
+            await new Promise(r => setTimeout(r, 700));
+
+            const menuItems = document.querySelectorAll(
+              'ytmusic-menu-service-item-renderer, tp-yt-paper-item, yt-list-item-view'
+            );
+            const queueKeywords = ['add to queue', 'save to queue', 'play next'];
+            for (const mi of menuItems) {
+              const text = mi.textContent?.trim()?.toLowerCase() || '';
+              if (queueKeywords.some(kw => text.includes(kw))) {
+                mi.click();
+                return resolve({ success: true, action: text });
+              }
+            }
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+            resolve({ success: false, error: 'No queue option found' });
+          } catch(e) {
+            resolve({ success: false, error: e.message });
+          }
+        });
+      })();
+    `);
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+};
+
+/**
+ * Remove a song from the queue by its DOM index.
+ * Strategy: hover to reveal menu, click More actions, then click Remove from queue.
+ * @param {number} domIndex - actual DOM index in ytmusic-player-queue-item NodeList
+ */
+export const removeFromQueue = async (domIndex) => {
+  return await executeInPlayback(`
+    (function() {
+      return new Promise(async (resolve) => {
+        try {
+          const items = document.querySelectorAll('ytmusic-player-queue-item');
+          const item = items[${domIndex}];
+          if (!item) return resolve({ success: false, error: 'No queue item at index ${domIndex}' });
+
+          // Scroll item into view so hover events work
+          item.scrollIntoView({ block: 'nearest' });
+
+          // Dispatch hover events to reveal the More Actions button
+          item.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, cancelable: true }));
+          item.dispatchEvent(new MouseEvent('mouseover',  { bubbles: true, cancelable: true }));
+          item.dispatchEvent(new MouseEvent('mousemove',  { bubbles: true, cancelable: true }));
+          await new Promise(r => setTimeout(r, 400));
+
+          // Try several selectors for the three-dot / More actions button
+          const menuBtn =
+            item.querySelector('button[aria-label="More actions"]') ||
+            item.querySelector('yt-button-shape button') ||
+            item.querySelector('[aria-label*="Action"]') ||
+            item.querySelector('ytmusic-menu-renderer button') ||
+            item.querySelector('[class*="menu"] button');
+
+          if (!menuBtn) return resolve({ success: false, error: 'More actions button not found on queue item at ${domIndex}' });
+
+          menuBtn.click();
+          await new Promise(r => setTimeout(r, 600));
+
+          // Look for Remove / Delete from queue option in the popup
+          const menuItems = document.querySelectorAll(
+            'ytmusic-menu-service-item-renderer, tp-yt-paper-item, yt-list-item-view, ytmusic-menu-navigation-item-renderer'
+          );
+          const removeKeywords = ['remove from queue', 'remove', 'delete'];
+          for (const mi of menuItems) {
+            const text = mi.textContent?.trim()?.toLowerCase() || '';
+            if (removeKeywords.some(kw => text.includes(kw))) {
+              mi.click();
+              return resolve({ success: true });
+            }
+          }
+
+          // Close popup and report failure
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          resolve({ success: false, error: 'Remove option not found in menu. Available: ' + Array.from(menuItems).map(m => m.textContent?.trim()).join(', ') });
+        } catch(e) {
+          resolve({ success: false, error: e.message });
+        }
+      });
+    })();
+  `);
+};
+
+
+/**
  * Click on a specific element (for playing playlists, albums, etc.)
  */
 export const clickElement = async (selector) => {
@@ -1008,8 +1364,18 @@ export const getPlaylistSongs = async (playlistId) => {
                 }
               }
               
+              // Extract videoId from the song's link
+              let videoId = '';
+              const songLink = element.querySelector('a.yt-simple-endpoint, a[href*="watch"]');
+              if (songLink) {
+                const href = songLink.href || songLink.getAttribute('href') || '';
+                const vMatch = href.match(/[?&]v=([^&]+)/);
+                if (vMatch) videoId = vMatch[1];
+              }
+
               songs.push({
                 id: 'song_' + index,
+                videoId: videoId,
                 title: titleEl.textContent?.trim() || '',
                 artist: artist,
                 duration: durationEl?.textContent?.trim() || '',
@@ -1103,37 +1469,164 @@ export const playSongByIndex = async (index) => {
   return result;
 };
 
+
+
+
 /**
- * Get current queue
+ * Get all tracks from an album by its browseId.
+ * Navigates the browse webview to the album page and scrapes the track list.
+ * @param {string} browseId - e.g. MPREb_xxxx
+ * @returns {{ album: object, tracks: object[] }}
  */
-export const getQueue = async () => {
-  return await executeInYT(`
-    (function () {
-      const queue = [];
-      // Try to get queue items
-      const queueItems = document.querySelectorAll('ytmusic-player-queue-item');
-      
-      queueItems.forEach((item, index) => {
-        const title = item.querySelector('.title')?.textContent?.trim();
-        const artist = item.querySelector('.byline')?.textContent?.trim();
-        
-        if (title) {
-          queue.push({
-            id: 'queue_' + index,
+export const getAlbumTracks = async (browseId) => {
+  const wv = getWebview();
+  if (!wv) return null;
+
+  const albumUrl = `https://music.youtube.com/browse/${browseId}`;
+  await wv.loadURL(albumUrl);
+
+  // Wait for the page to fully render
+  await new Promise(r => setTimeout(r, 3500));
+
+  return await wv.executeJavaScript(`
+    (function() {
+      try {
+        const tracks = [];
+
+        // --- Album metadata ---
+        const titleEl  = document.querySelector('h2.title, ytmusic-detail-header-renderer h1, .header-details h1, [class*="title"][class*="header"]');
+        const artistEl = document.querySelector('.subtitle a, ytmusic-detail-header-renderer .subtitle a, .flex-columns a');
+        const yearEl   = document.querySelector('.subtitle-separator + span, .subtitle span:last-child');
+        const imgEl    = document.querySelector('ytmusic-detail-header-renderer img, #header img');
+
+        const album = {
+          title:  titleEl?.textContent?.trim()  || document.title || '',
+          artist: artistEl?.textContent?.trim() || '',
+          year:   yearEl?.textContent?.trim()   || '',
+          artwork: imgEl?.src || ''
+        };
+
+        // --- Tracks ---
+        // YTM album pages use ytmusic-responsive-list-item-renderer inside the shelf
+        const itemEls = document.querySelectorAll(
+          'ytmusic-responsive-list-item-renderer, ytmusic-music-shelf-renderer ytmusic-responsive-list-item-renderer'
+        );
+
+        const seen = new Set();
+        itemEls.forEach((el, idx) => {
+          const titleEl   = el.querySelector('.title, yt-formatted-string.title');
+          const artistEl  = el.querySelector('.secondary-flex-columns a, .subtitle a');
+          const durationEl = el.querySelector('.fixed-columns yt-formatted-string, [class*="duration"]');
+          const imgEl     = el.querySelector('img');
+          const link      = el.querySelector('a[href*="watch"], a[href*="v="]');
+
+          let videoId = '';
+          if (link) {
+            const href = link.href || link.getAttribute('href') || '';
+            const m = href.match(/[?&]v=([^&]+)/);
+            if (m) videoId = m[1];
+          }
+
+          // Also try data attribute on the element
+          if (!videoId && el.data?.videoId) videoId = el.data.videoId;
+
+          const title = titleEl?.textContent?.trim() || '';
+          if (!title || seen.has(title)) return;
+          seen.add(title);
+
+          // Try to get thumbnail from element data or img
+          let thumbnail = imgEl?.src || '';
+          if (el.data?.thumbnail) {
+            const thumbs = el.data.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails;
+            if (thumbs?.length) thumbnail = thumbs[thumbs.length - 1].url;
+          }
+
+          tracks.push({
+            index:    idx,
+            videoId,
             title,
-            artist: artist || '',
-            index
+            artist:   artistEl?.textContent?.trim()   || album.artist || '',
+            duration: durationEl?.textContent?.trim() || '',
+            thumbnail: thumbnail || album.artwork
           });
-        }
-      });
-      
-      return queue.length > 0 ? queue : null;
+        });
+
+        return { album, tracks };
+      } catch(e) {
+        return { album: {}, tracks: [], error: e.message };
+      }
     })();
   `);
 };
 
+/**
+ * Play an album starting from a specific track index in the PLAYBACK webview.
+ * Uses the same pattern as playSongInPlayback — loads the album browse page,
+ * waits for it to render, then clicks the track. This way YTM auto-queues
+ * all remaining tracks from the album.
+ * @param {string} browseId
+ * @param {number} trackIndex
+ */
+export const playAlbumFromTrack = async (browseId, trackIndex) => {
+  const wv = getPlaybackWebview();
+  if (!wv) return { success: false, error: 'Playback webview not available' };
 
+  const albumUrl = `https://music.youtube.com/browse/${browseId}`;
 
+  // Only navigate if we're not already on this album
+  if (currentPlaybackPlaylistId !== browseId) {
+    console.log('[playAlbumFromTrack] Loading album:', browseId);
+    await wv.loadURL(albumUrl);
+
+    // Wait for page to finish loading
+    await new Promise((resolve) => {
+      const onLoad = () => {
+        wv.removeEventListener('did-finish-load', onLoad);
+        resolve();
+      };
+      wv.addEventListener('did-finish-load', onLoad);
+      setTimeout(resolve, 5000); // Timeout
+    });
+
+    // Extra wait for content render
+    await new Promise(r => setTimeout(r, 2000));
+    currentPlaybackPlaylistId = browseId;
+  }
+
+  // Click the track at the given index — same as playSongInPlayback
+  const result = await executeInPlayback(`
+    (function() {
+      try {
+        const trackIndex = ${trackIndex};
+        console.log('[Playback] Looking for track at index:', trackIndex);
+
+        const songs = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
+        console.log('[Playback] Found', songs.length, 'tracks on album page');
+
+        if (songs.length > trackIndex) {
+          const song = songs[trackIndex];
+          song.click();
+
+          // Also try clicking the play button overlay
+          setTimeout(() => {
+            const playBtn = song.querySelector('[aria-label*="Play"]');
+            if (playBtn) playBtn.click();
+          }, 300);
+
+          console.log('[Playback] Clicked track at index', trackIndex);
+          return { success: true, index: trackIndex };
+        }
+
+        return { success: false, error: 'Track not found at index ' + trackIndex };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    })();
+  `);
+
+  console.log('[playAlbumFromTrack] Result:', result);
+  return result || { success: false, error: 'Unknown error' };
+};
 
 export default {
   getWebview,
@@ -1157,5 +1650,10 @@ export default {
   playSongByIndex,
   getQueue,
   getProgress,
-  seekTo
+  seekTo,
+  getAlbumTracks,
+  playAlbumFromTrack,
+  addToQueue,
+  removeFromQueue,
+  playFromQueueIndex
 };

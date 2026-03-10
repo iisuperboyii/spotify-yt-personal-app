@@ -246,23 +246,27 @@
 }
 
 /* Collapsible Sidebar Styles - Spotify Design */
+.sidebar-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 0;
+}
+
 .sidebar-toggle {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
-  margin: 8px 8px 0 8px;
+  justify-content: center;
+  padding: 8px;
   background: transparent;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   color: #b3b3b3;
-  font-size: 16px;
-  font-weight: 700;
   transition: all 0.2s ease;
-  position: relative;
-  width: calc(100% - 16px);
-  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
 }
 
 .sidebar-toggle:hover {
@@ -276,17 +280,29 @@
   height: 24px;
 }
 
-.sidebar-toggle .toggle-text {
+.toggle-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 16px;
+  font-weight: 700;
+  color: #b3b3b3;
+  transition: color 0.2s;
+}
+
+.toggle-text:hover {
+  color: white;
 }
 
 /* When collapsed, center the icon */
+.sidebar.collapsed .sidebar-header-row {
+  justify-content: center;
+  padding: 8px 0 0;
+}
+
 .sidebar.collapsed .sidebar-toggle {
   justify-content: center;
   padding: 8px;
-  margin: 8px auto;
   width: 48px;
   height: 48px;
 }

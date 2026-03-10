@@ -293,11 +293,26 @@
 /* Loading State */
 .search-loading {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 48px;
+  gap: 16px;
+  padding: 80px 48px;
   color: #b3b3b3;
   font-size: 16px;
+}
+
+.search-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: #1ed760;
+  border-radius: 50%;
+  animation: searchSpin 0.8s linear infinite;
+}
+
+@keyframes searchSpin {
+  to { transform: rotate(360deg); }
 }
 
 /* No Results */
@@ -318,3 +333,8 @@
   font-size: 16px;
   margin: 0;
 }
+
+/* Album card — square-ish cover with rounded corners */
+.album-card .result-card-image {
+  border-radius: 4px;
+}

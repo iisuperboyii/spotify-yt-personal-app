@@ -5,6 +5,7 @@ import Search from "./pages/Search";
 import Library from "./pages/Library";
 import Settings from "./pages/Settings";
 import PlaylistView from "./pages/PlaylistView";
+import AlbumView from "./pages/AlbumView";
 import NowPlaying from "./pages/NowPlaying";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/playlist/:id" element={<PlaylistView />} />
+        <Route path="/album/:browseId" element={<AlbumView />} />
         <Route path="/now-playing" element={<NowPlaying />} />
       </Route>
     </Routes>

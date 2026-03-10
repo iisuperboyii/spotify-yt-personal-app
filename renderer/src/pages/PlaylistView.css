@@ -202,7 +202,7 @@ body.playlist-song-hovered .sidebar-divider {
 
 .table-header {
   display: grid;
-  grid-template-columns: 50px 1fr 1fr 100px;
+  grid-template-columns: 50px 1fr 1fr 80px 36px;
   gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid #282828;
@@ -221,7 +221,7 @@ body.playlist-song-hovered .sidebar-divider {
 
 .song-row {
   display: grid;
-  grid-template-columns: 50px 1fr 1fr 100px;
+  grid-template-columns: 50px 1fr 1fr 80px 36px;
   gap: 16px;
   padding: 8px 16px;
   border-radius: 4px;

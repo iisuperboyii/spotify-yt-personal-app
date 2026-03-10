@@ -10,7 +10,6 @@ body.sidebar-collapsed .main-content-wrapper {
 /* When hovering playlist songs, shift content left to show YouTube Music */
 body.playlist-song-hovered .main-content-wrapper {
   margin-left: 0 !important;
-  /* Shift all the way left */
 }
 
 /* Hide sidebar when hovering playlist songs */
@@ -23,5 +22,10 @@ body.playlist-song-hovered .sidebar {
 /* Also need to shift TopNav */
 body.playlist-song-hovered .top-nav {
   padding-left: 24px !important;
-  /* Just basic padding */
 }
+
+/* Queue panel slide-in from right */
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}

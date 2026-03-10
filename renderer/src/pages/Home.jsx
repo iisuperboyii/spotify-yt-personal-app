@@ -13,7 +13,7 @@ export default function Home() {
   // Fetch recently played from YouTube Music with better scraping
   useEffect(() => {
     const fetchRecentlyPlayed = async () => {
-      const wv = window.ytWebview;
+      const wv = window.ytBrowseWebview || window.ytWebview;
       if (!wv) {
         console.log('No webview available, using fallback');
         fallbackData();
@@ -85,17 +85,19 @@ export default function Home() {
                         
                         let browseId = '';
                         let playlistId = '';
+                        let videoId = '';
                         const link = item.querySelector('a');
                         if (link && link.href) {
                           const url = link.href;
+                          // Extract video ID for songs
+                          const videoMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+                          if (videoMatch) videoId = videoMatch[1];
+                          // Extract playlist ID
                           const playlistMatch = url.match(/[?&]list=([^&]+)/);
-                          if (playlistMatch) {
-                            playlistId = playlistMatch[1];
-                          }
-                          const browseMatch = url.match(/browse\\/([^?&]+)/);
-                          if (browseMatch) {
-                            browseId = browseMatch[1];
-                          }
+                          if (playlistMatch) playlistId = playlistMatch[1];
+                          // Extract browse ID
+                          const browseMatch = url.match(/browse\/([^?&]+)/);
+                          if (browseMatch) browseId = browseMatch[1];
                         }
                         
                         return {
@@ -105,7 +107,8 @@ export default function Home() {
                           index: index,
                           type: itemType,
                           browseId: browseId,
-                          playlistId: playlistId
+                          playlistId: playlistId,
+                          videoId: videoId
                         };
                       });
                       
@@ -158,7 +161,7 @@ export default function Home() {
   useEffect(() => {
     const fetchQuickPicks = async () => {
       console.log('[Quick Picks] Starting fetch...');
-      const wv = window.ytWebview;
+      const wv = window.ytBrowseWebview || window.ytWebview;
       if (!wv) {
         console.log('[Quick Picks] No webview available');
         return;
@@ -306,75 +309,68 @@ export default function Home() {
 
 
   const handleItemClick = async (item) => {
-    const wv = window.ytBrowseWebview || window.ytWebview;
+    console.log('[Home] Item clicked:', item.type, item.title, '| videoId:', item.videoId, '| playlistId:', item.playlistId);
 
     try {
-      // Handle playlists - play first song using playback webview
-      if (item.type === 'playlist' && item.playlistId) {
-        console.log('[Home] Playing playlist:', item.playlistId);
-        // Play first song in playback webview
+      // Songs with a videoId — play directly in playback webview
+      if (item.videoId) {
+        console.log('[Home] Playing song by videoId:', item.videoId);
+        await playSongByVideoIdInPlayback(item.videoId);
+        return;
+      }
+
+      // Playlists / albums with a playlistId — load into playback webview
+      if (item.playlistId) {
+        console.log('[Home] Playing playlist/album:', item.playlistId);
         await playSongInPlayback(item.playlistId, 0);
-        // Navigate to playlist view in UI
-        navigate(`/playlist/${item.playlistId}?name=${encodeURIComponent(item.title)}&creator=${encodeURIComponent(item.artist)}`);
+        if (item.type === 'playlist') {
+          navigate(`/playlist/${item.playlistId}?name=${encodeURIComponent(item.title)}&creator=${encodeURIComponent(item.artist || '')}`);
+        }
         return;
       }
 
-      // Handle albums - navigate to the album in YouTube Music webview
-      if (item.type === 'album' && item.browseId && wv) {
-        await wv.executeJavaScript(`
-          (function() {
-            const browseUrl = '/browse/${item.browseId}';
-            if (window.location.pathname !== browseUrl) {
-              window.history.pushState({}, '', browseUrl);
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }
-          })();
-        `);
+      // Albums / artists with a browseId — navigate browse webview only
+      if (item.browseId) {
+        const wv = window.ytBrowseWebview || window.ytWebview;
+        if (wv) {
+          console.log('[Home] Browsing to:', item.browseId);
+          await wv.loadURL(`https://music.youtube.com/browse/${item.browseId}`);
+        }
         return;
       }
 
-      // Handle artists - navigate to artist page
-      if (item.type === 'artist' && item.browseId && wv) {
-        await wv.executeJavaScript(`
-          (function() {
-            const browseUrl = '/browse/${item.browseId}';
-            if (window.location.pathname !== browseUrl) {
-              window.history.pushState({}, '', browseUrl);
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }
-          })();
-        `);
-        return;
-      }
-
-      // Handle songs - click in browse webview (fallback, as songs should have videoId)
+      // Last resort: try to extract videoId from browse webview at item index
+      const wv = window.ytBrowseWebview || window.ytWebview;
       if (typeof item.index !== 'undefined' && wv) {
-        await wv.executeJavaScript(`
+        console.log('[Home] Trying to extract videoId from browse webview at index', item.index);
+        const videoId = await wv.executeJavaScript(`
           (function() {
-            try {
-              const shelves = document.querySelectorAll('ytmusic-carousel-shelf-renderer, ytmusic-shelf-renderer');
-              if (shelves.length > 0) {
-                const firstShelf = shelves[0];
-                const items = firstShelf.querySelectorAll('ytmusic-two-row-item-renderer, ytmusic-responsive-list-item-renderer');
-                const targetItem = items[${item.index}];
-                
-                if (targetItem) {
-                  // Try to find the overlay play button
-                  const playOverlay = targetItem.querySelector('.icon, .play-button, ytmusic-play-button-renderer');
-                  if (playOverlay) {
-                    playOverlay.click();
-                    return true;
-                  } else {
-                    // Fallback to clicking the item itself
-                    targetItem.click();
-                    return true;
-                  }
+            const shelves = document.querySelectorAll('ytmusic-carousel-shelf-renderer, ytmusic-shelf-renderer');
+            if (shelves.length > 0) {
+              const items = shelves[0].querySelectorAll('ytmusic-two-row-item-renderer, ytmusic-responsive-list-item-renderer');
+              const el = items[${item.index}];
+              if (el) {
+                const a = el.querySelector('a');
+                if (a) {
+                  const href = a.href || a.getAttribute('href') || '';
+                  const m = href.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+                  if (m) return m[1];
+                  const pl = href.match(/[?&]list=([^&]+)/);
+                  if (pl) return '__playlist__' + pl[1];
                 }
               }
-              return false;
-            } catch(e) { return false; }
+            }
+            return null;
           })();
         `);
+
+        if (videoId && videoId.startsWith('__playlist__')) {
+          await playSongInPlayback(videoId.replace('__playlist__', ''), 0);
+        } else if (videoId) {
+          await playSongByVideoIdInPlayback(videoId);
+        } else if (item.query) {
+          await searchYouTubeMusic(item.query);
+        }
       } else if (item.query) {
         await searchYouTubeMusic(item.query);
       }

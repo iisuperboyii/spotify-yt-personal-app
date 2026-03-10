@@ -1,8 +1,10 @@
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import PlayerBar from "../components/PlayerBar";
+import QueuePanel from "../components/QueuePanel";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { useUIContext } from "../context/UIContext";
 import { getSettings } from "../utils/settings";
 import { FiSettings } from "react-icons/fi";
 import "./AppLayout.css";
@@ -11,6 +13,7 @@ export default function AppLayout() {
   const [showYT, setShowYT] = useState(getSettings().showYouTubeUI);
   const [showPlaybackWV, setShowPlaybackWV] = useState(getSettings().showPlaybackWebview);
   const [playbackReady, setPlaybackReady] = useState(false);
+  const { showQueue, setShowQueue } = useUIContext();
   const location = useLocation();
   const navigate = useNavigate();
   const playbackWebviewRef = useRef(null);
@@ -142,6 +145,22 @@ export default function AppLayout() {
 
         <PlayerBar />
       </div>
+
+      {/* Queue Panel - shown as a fixed right-side overlay when NOT on Now Playing */}
+      {showQueue && !isNowPlayingPage && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          width: '320px',
+          height: 'calc(100vh - 90px)', // above PlayerBar
+          zIndex: 8000,
+          boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
+          animation: 'slideInFromRight 0.25s ease'
+        }}>
+          <QueuePanel onClose={() => setShowQueue(false)} />
+        </div>
+      )}
     </div>
   );
 }

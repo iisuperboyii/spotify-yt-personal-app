@@ -12,6 +12,7 @@ export const useUIContext = () => {
 
 export const UIProvider = ({ children }) => {
   const [showLyricsInNowPlaying, setShowLyricsInNowPlaying] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const [currentSong, setCurrentSong] = useState({
     title: "Not Playing",
     artist: "",
@@ -23,6 +24,8 @@ export const UIProvider = ({ children }) => {
   const value = {
     showLyricsInNowPlaying,
     setShowLyricsInNowPlaying,
+    showQueue,
+    setShowQueue,
     currentSong,
     setCurrentSong,
     currentLyrics,

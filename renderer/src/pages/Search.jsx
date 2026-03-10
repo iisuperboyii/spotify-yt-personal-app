@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { FiSearch, FiPlay } from "react-icons/fi";
-import { playSongByVideoIdInPlayback, getPlaybackWebview } from "../utils/ytMusicAPI";
+import { FiSearch, FiPlay, FiPlusCircle } from "react-icons/fi";
+import { playSongByVideoIdInPlayback, getPlaybackWebview, addToQueue } from "../utils/ytMusicAPI";
 import "./Search.css";
 
 export default function Search() {
@@ -10,8 +10,19 @@ export default function Search() {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState({ songs: [], albums: [] });
   const [showResults, setShowResults] = useState(false);
+  const [queuedIds, setQueuedIds] = useState(new Set()); // track which songs were queued
+
+  const handleAddToQueue = async (e, result) => {
+    e.stopPropagation();
+    if (!result.videoId) return;
+    const res = await addToQueue(result.videoId);
+    if (res?.success !== false) {
+      setQueuedIds(prev => new Set([...prev, result.videoId]));
+      setTimeout(() => setQueuedIds(prev => { const n = new Set(prev); n.delete(result.videoId); return n; }), 2000);
+    }
+  };
 
   // Auto-search when URL has query parameter
   useEffect(() => {
@@ -28,115 +39,86 @@ export default function Search() {
     setLoading(true);
     setShowResults(true);
 
-    // Use browse webview for search navigation
     const wv = window.ytBrowseWebview || window.ytWebview;
-    if (!wv) {
-      setLoading(false);
-      return;
-    }
+    if (!wv) { setLoading(false); return; }
 
     try {
-      console.log('Searching:', searchQuery);
-
-      // Always use loadURL for reliable search navigation
       const searchUrl = `https://music.youtube.com/search?q=${encodeURIComponent(searchQuery)}`;
-      console.log('Navigating browse webview to:', searchUrl);
       await wv.loadURL(searchUrl);
 
-      // Wait for results to load
       setTimeout(async () => {
-        // Try to get thumbnails from YouTube Music's internal data
-        const results = await wv.executeJavaScript(`
-      (function () {
-        const songs = [];
-        const songElements = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
+        const rawResults = await wv.executeJavaScript(`
+          (function() {
+            const items = [];
+            const elements = document.querySelectorAll('ytmusic-responsive-list-item-renderer');
 
-        songElements.forEach((element, idx) => {
-          if (idx >= 20) return;
+            elements.forEach((el, idx) => {
+              if (idx >= 24) return;
 
-          const titleEl = element.querySelector('.title');
-          const artistEls = element.querySelectorAll('.secondary-flex-columns a');
+              const titleEl = el.querySelector('.title');
+              if (!titleEl) return;
 
-          // Get thumbnail - try to extract from element's data
-          let thumbnail = '';
+              const title = titleEl.textContent?.trim() || '';
+              if (!title) return;
 
-          // Method 1: Check if element has thumbnail data in its properties
-          if (element.data && element.data.thumbnail) {
-            const thumbs = element.data.thumbnail.musicThumbnailRenderer?.thumbnail?.thumbnails;
-            if (thumbs && thumbs.length > 0) {
-              thumbnail = thumbs[thumbs.length - 1].url; // Get highest quality
-            }
-          }
-
-          // Method 2: Look for yt-img-shadow component
-          if (!thumbnail || thumbnail.includes('data:image')) {
-            const ytImg = element.querySelector('yt-img-shadow img');
-            if (ytImg) {
-              // Try to get from various attributes
-              thumbnail = ytImg.src;
-
-              if (thumbnail.includes('data:image') || thumbnail.includes('1x1')) {
-                thumbnail = ytImg.getAttribute('data-src') ||
-                  ytImg.getAttribute('srcset')?.split(',').pop()?.trim().split(' ')[0] ||
-                  '';
+              // Thumbnail
+              let thumbnail = '';
+              if (el.data?.thumbnail) {
+                const thumbs = el.data.thumbnail.musicThumbnailRenderer?.thumbnail?.thumbnails;
+                if (thumbs?.length) thumbnail = thumbs[thumbs.length-1].url;
               }
-            }
-          }
+              if (!thumbnail || thumbnail.includes('data:image')) {
+                const img = el.querySelector('img');
+                if (img && !img.src.includes('data:image')) thumbnail = img.src;
+              }
+              if (thumbnail && !thumbnail.includes('data:image')) {
+                thumbnail = thumbnail.replace(/=w\\d+-h\\d+/g, '=w300-h300');
+              }
 
-          // Method 3: Fallback to any img in the thumbnail area
-          if (!thumbnail || thumbnail.includes('data:image')) {
-            const musicThumbnail = element.querySelector('ytmusic-thumbnail-renderer img, #img img');
-            if (musicThumbnail && musicThumbnail.src && !musicThumbnail.src.includes('data:image')) {
-              thumbnail = musicThumbnail.src;
-            }
-          }
+              // Artists / subtitle
+              const artistEls = el.querySelectorAll('.secondary-flex-columns a');
+              const artist = artistEls[0]?.textContent?.trim() || '';
 
-          // Upgrade quality if we have a real URL
-          if (thumbnail && !thumbnail.includes('data:image')) {
-            thumbnail = thumbnail.replace(/=w\d+-h\d+/g, '=w300-h300');
-          }
+              // Detect type: song vs album/playlist
+              const link = el.querySelector('a.yt-simple-endpoint');
+              const href = link?.href || link?.getAttribute('href') || '';
 
-          if (titleEl) {
-            let artist = '';
-            if (artistEls && artistEls.length > 0) {
-              artist = artistEls[0].textContent?.trim() || '';
-            }
+              // videoId => song
+              let videoId = '';
+              const vidMatch = href.match(/[?&]v=([^&]+)/);
+              if (vidMatch) videoId = vidMatch[1];
+              if (!videoId && el.data?.videoId) videoId = el.data.videoId;
 
-            // Extract video ID from the title link href (handles both full and relative URLs)
-            const titleLink = element.querySelector('a.yt-simple-endpoint');
-            let videoId = '';
-            if (titleLink) {
-              const href = titleLink.href || titleLink.getAttribute('href') || '';
-              // Try multiple patterns for video ID
-              let match = href.match(/[?&]v=([^&]+)/);
-              if (!match) match = href.match(/watch\?v=([^&]+)/);
-              if (!match) match = href.match(/v=([a-zA-Z0-9_-]{11})/);
-              if (match) videoId = match[1];
-              console.log('Search result href:', href, 'videoId:', videoId);
-            }
+              // browseId => album or playlist
+              let browseId = '';
+              const browseMatch = href.match(/browse\\/(MPREb_[^?&]+|MPLA[^?&]+|PL[^?&]+)/);
+              if (browseMatch) browseId = browseMatch[1];
+              if (!browseId && el.data?.browseId) browseId = el.data.browseId;
 
-            songs.push({
-              id: 'search_' + idx,
-              videoId: videoId,
-              title: titleEl.textContent?.trim() || '',
-              artist: artist,
-              thumbnail: thumbnail,
-              index: idx
+              // Type label shown in subtitles (Album, Single, Playlist, EP...)
+              const subtitleSpan = el.querySelector('.secondary-flex-columns span');
+              const typeLabel = subtitleSpan?.textContent?.trim()?.toLowerCase() || '';
+
+              const isAlbum = !videoId && browseId && (
+                browseId.startsWith('MPREb_') ||
+                typeLabel === 'album' || typeLabel === 'single' || typeLabel === 'ep'
+              );
+
+              items.push({ idx, title, artist, thumbnail, videoId, browseId, isAlbum, typeLabel });
             });
-          }
-        });
 
-        return songs;
-      })();
-    `);
+            return items;
+          })();
+        `);
 
-        console.log('Search results:', results);
-        console.log('First result thumbnail:', results[0]?.thumbnail);
-        setSearchResults(results || []);
+        const songs  = (rawResults || []).filter(r => r.videoId && !r.isAlbum);
+        const albums = (rawResults || []).filter(r => r.isAlbum && r.browseId);
+
+        setSearchResults({ songs, albums });
         setLoading(false);
       }, 4000);
     } catch (error) {
-      console.error("Error searching:", error);
+      console.error("Search error:", error);
       setLoading(false);
     }
   };
@@ -207,110 +189,162 @@ export default function Search() {
   };
 
 
-
+  const songs  = searchResults.songs  || [];
+  const albums = searchResults.albums || [];
+  const hasResults = songs.length > 0 || albums.length > 0;
 
   return (
     <div className="search-page">
-      {/* Category Tabs */}
-      <div className="search-tabs">
-        <button className="search-tab active">All</button>
-        <button className="search-tab">Artists</button>
-        <button className="search-tab">Albums</button>
-        <button className="search-tab">Songs</button>
-        <button className="search-tab">Playlists</button>
-      </div>
-
       {loading ? (
         <div className="search-loading">
-          <p>Searching YouTube Music...</p>
+          <div className="loading-spinner-green" />
+          <p>Searching YouTube Music…</p>
         </div>
-      ) : searchResults.length === 0 && showResults ? (
+      ) : !hasResults && showResults ? (
         <div className="no-results">
           <h2 className="no-results-title">No results found</h2>
           <p className="no-results-text">Try searching with different keywords</p>
         </div>
-      ) : searchResults.length > 0 ? (
+      ) : hasResults ? (
         <div className="search-results-container">
-          {/* Top Result + Songs Section */}
-          <div className="top-result-section">
-            {/* Top Result */}
-            <div
-              className="top-result-card"
-              onClick={() => handleResultClick(searchResults[0])}
-            >
-              <img
-                src={searchResults[0].thumbnail || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="92" height="92"%3E%3Crect fill="%23333" width="92" height="92"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23666" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E'}
-                alt={searchResults[0].title}
-                className="top-result-image"
-                onError={(e) => {
-                  console.error('Top result image failed to load:', searchResults[0].thumbnail);
-                  e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="92" height="92"%3E%3Crect fill="%23333" width="92" height="92"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23666" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
-                }}
-              />
-              <h2 className="top-result-title">{searchResults[0].title}</h2>
-              <p className="top-result-artist">{searchResults[0].artist}</p>
-              <span className="top-result-type">Song</span>
-              <div className="top-result-play">
-                <svg width="24" height="24" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
+
+          {/* ── Top Result + Songs ── */}
+          {songs.length > 0 && (
+            <div className="top-result-section">
+              {/* Top result card */}
+              <div
+                className="top-result-card"
+                onClick={() => handleResultClick(songs[0])}
+              >
+                <img
+                  src={songs[0].thumbnail || ''}
+                  alt={songs[0].title}
+                  className="top-result-image"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                <h2 className="top-result-title">{songs[0].title}</h2>
+                <p className="top-result-artist">{songs[0].artist}</p>
+                <span className="top-result-type">Song</span>
+                <div className="top-result-play">
+                  <svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                </div>
+                {songs[0].videoId && (
+                  <button
+                    className={`add-queue-btn ${queuedIds.has(songs[0].videoId) ? 'queued' : ''}`}
+                    title="Add to queue"
+                    onClick={(e) => handleAddToQueue(e, songs[0])}
+                  >
+                    {queuedIds.has(songs[0].videoId) ? '✓' : '+'}
+                  </button>
+                )}
+              </div>
+
+              {/* Songs list */}
+              <div className="songs-section">
+                <h2 className="section-title">Songs</h2>
+                <div className="songs-list">
+                  {songs.slice(0, 4).map((result, idx) => (
+                    <div
+                      key={idx}
+                      className="song-item"
+                      onClick={() => handleResultClick(result)}
+                    >
+                      <div className="song-item-number">{idx + 1}</div>
+                      <img
+                        src={result.thumbnail || ''}
+                        alt={result.title}
+                        className="song-item-image"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                      <div className="song-item-info">
+                        <div className="song-item-title">{result.title}</div>
+                        <div className="song-item-artist">{result.artist}</div>
+                      </div>
+                      {result.videoId && (
+                        <button
+                          className={`add-queue-btn ${queuedIds.has(result.videoId) ? 'queued' : ''}`}
+                          title="Add to queue"
+                          onClick={(e) => handleAddToQueue(e, result)}
+                        >
+                          {queuedIds.has(result.videoId) ? '✓' : '+'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Songs List */}
-            <div className="songs-section">
-              <h2 className="section-title">Songs</h2>
-              <div className="songs-list">
-                {searchResults.slice(0, 4).map((result, idx) => (
+          {/* ── Albums section ── */}
+          {albums.length > 0 && (
+            <>
+              <h2 className="section-title">Albums</h2>
+              <div className="results-grid">
+                {albums.map((album, idx) => (
                   <div
                     key={idx}
-                    className="song-item"
-                    onClick={() => handleResultClick(result)}
-                  >
-                    <div className="song-item-number">{idx + 1}</div>
-                    <img
-                      src={result.thumbnail || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40"%3E%3Crect fill="%23333" width="40" height="40"/%3E%3C/svg%3E'}
-                      alt={result.title}
-                      className="song-item-image"
-                    />
-                    <div className="song-item-info">
-                      <div className="song-item-title">{result.title}</div>
-                      <div className="song-item-artist">{result.artist}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* All Results Grid */}
-          {searchResults.length > 4 && (
-            <>
-              <h2 className="section-title">All Results</h2>
-              <div className="results-grid">
-                {searchResults.slice(4).map((result, idx) => (
-                  <div
-                    key={idx + 4}
-                    className="result-card"
-                    onClick={() => handleResultClick(result)}
+                    className="result-card album-card"
+                    onClick={() => navigate(
+                      `/album/${encodeURIComponent(album.browseId)}?name=${encodeURIComponent(album.title)}&artist=${encodeURIComponent(album.artist)}&cover=${encodeURIComponent(album.thumbnail)}`
+                    )}
                   >
                     <img
-                      src={result.thumbnail || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="180" height="180"%3E%3Crect fill="%23333" width="180" height="180"/%3E%3C/svg%3E'}
-                      alt={result.title}
+                      src={album.thumbnail || ''}
+                      alt={album.title}
                       className="result-card-image"
+                      onError={(e) => { e.target.style.display = 'none'; }}
                     />
-                    <div className="result-card-title">{result.title}</div>
-                    <div className="result-card-artist">{result.artist}</div>
+                    <div className="result-card-title">{album.title}</div>
+                    <div className="result-card-artist">
+                      {album.typeLabel || 'Album'} • {album.artist}
+                    </div>
                     <div className="result-card-play">
-                      <svg width="20" height="20" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                     </div>
                   </div>
                 ))}
               </div>
             </>
           )}
+
+          {/* ── More songs grid ── */}
+          {songs.length > 4 && (
+            <>
+              <h2 className="section-title">More Songs</h2>
+              <div className="results-grid">
+                {songs.slice(4).map((result, idx) => (
+                  <div
+                    key={idx + 4}
+                    className="result-card"
+                    onClick={() => handleResultClick(result)}
+                  >
+                    <img
+                      src={result.thumbnail || ''}
+                      alt={result.title}
+                      className="result-card-image"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                    <div className="result-card-title">{result.title}</div>
+                    <div className="result-card-artist">{result.artist}</div>
+                    <div className="result-card-play">
+                      <svg width="20" height="20" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                    </div>
+                    {result.videoId && (
+                      <button
+                        className={`add-queue-btn ${queuedIds.has(result.videoId) ? 'queued' : ''}`}
+                        title="Add to queue"
+                        onClick={(e) => handleAddToQueue(e, result)}
+                      >
+                        {queuedIds.has(result.videoId) ? '✓' : '+'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
         </div>
       ) : null}
     </div>

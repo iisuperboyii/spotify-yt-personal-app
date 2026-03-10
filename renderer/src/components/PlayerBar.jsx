@@ -47,6 +47,8 @@ export default function PlayerBar() {
     setCurrentLyrics,
     showLyricsInNowPlaying,
     setShowLyricsInNowPlaying,
+    showQueue,
+    setShowQueue,
     setCurrentSong: setGlobalSong
   } = useUIContext();
 
@@ -62,7 +64,7 @@ export default function PlayerBar() {
   const [volume, setVolume] = useState(50);
   const [isHoveringVolume, setIsHoveringVolume] = useState(false);
   const [showLyricsPopup, setShowLyricsPopup] = useState(false);
-  const [showQueue, setShowQueue] = useState(false);
+  // showQueue is now from UIContext (shared with NowPlaying + AppLayout)
 
   const lastPlayToggleTime = useRef(0);
   const [isLiked, setIsLiked] = useState(false);
