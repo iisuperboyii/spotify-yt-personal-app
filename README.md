@@ -4,8 +4,8 @@
 
 **The Spotify experience. Powered by YouTube.**
 
-[![Version](https://img.shields.io/badge/version-0.0.2--alpha-orange?style=flat-square)](https://github.com/iisuperboyii/spotify-yt-personal-app/releases)
-[![Status](https://img.shields.io/badge/status-early%20alpha-red?style=flat-square)]()
+[![Version](https://img.shields.io/badge/version-1.0.0--beta-orange?style=flat-square)](https://github.com/iisuperboyii/spotify-yt-personal-app/releases)
+[![Status](https://img.shields.io/badge/status-early%beta-red?style=flat-square)]()
 [![Built With](https://img.shields.io/badge/built%20with-Electron-47848F?style=flat-square&logo=electron)](https://www.electronjs.org/)
 
 
@@ -21,7 +21,7 @@ Spotifyt is a desktop music player that brings a clean, Spotify-style interface 
 
 If you have YouTube Premium? No ads. Just music.
 
-> ⚠️ **Early Alpha** — This is v0.0.2-alpha. It works, but barely. You've been warned (lovingly).
+> ⚠️ **Early Alpha** — This is v1.0.0-beta. It works, but barely. You've been warned (lovingly).
 
 ---
 
@@ -70,7 +70,7 @@ Then log in with your YouTube account inside the app and you're good to go. 🎧
 
 Pre-built `.exe` releases are available on the [Releases page](https://github.com/iisuperboyii/spotify-yt-personal-app/releases).
 
-> **Note:** v0.0.2-alpha is a very early pre-release. Cloning and running locally is the recommended way to use Spotifyt right now.
+> **Note:** v1.0.0(beta) is a very early pre-release. Cloning and running locally is the recommended way to use Spotifyt right now.
 
 ---
 
