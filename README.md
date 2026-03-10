@@ -5,7 +5,7 @@
 **The Spotify experience. Powered by YouTube.**
 
 [![Version](https://img.shields.io/badge/version-1.0.0--beta-orange?style=flat-square)](https://github.com/iisuperboyii/spotify-yt-personal-app/releases)
-[![Status](https://img.shields.io/badge/status-early%beta-red?style=flat-square)]()
+[![Status](https://img.shields.io/badge/status-early%20beta-red?style=flat-square)]()
 [![Built With](https://img.shields.io/badge/built%20with-Electron-47848F?style=flat-square&logo=electron)](https://www.electronjs.org/)
 
 
